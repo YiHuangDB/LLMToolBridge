@@ -1,0 +1,105 @@
+{
+  "proxy": {
+    "port": 3500,
+    "adminPort": 3501,
+    "chatApiKey": "",
+    "enableLogging": true,
+    "logLevel": "info",
+    "corsOrigins": [
+      "*"
+    ],
+    "maxRequestSize": "50mb",
+    "defaultTarget": "c05a1860-50a6-4e02-9567-0f5e16aa01f0"
+  },
+  "targets": [
+    {
+      "id": "env-default",
+      "name": "Environment Default",
+      "url": "http://localhost:8000/v1/chat/completions",
+      "apiKey": "your-autorouter-api-key-here",
+      "model": "freetool",
+      "enabled": true,
+      "priority": 1,
+      "createdAt": "2025-08-15T00:19:21.441Z",
+      "updatedAt": "2025-08-15T00:19:21.441Z"
+    },
+    {
+      "name": "Ollama Local",
+      "url": "http://localhost:11434/v1/chat/completions",
+      "model": "gemma3:latest",
+      "enabled": true,
+      "priority": 1,
+      "id": "c05a1860-50a6-4e02-9567-0f5e16aa01f0",
+      "createdAt": "2025-08-15T03:23:29.728Z",
+      "updatedAt": "2025-08-15T03:23:29.728Z"
+    }
+  ],
+  "models": [
+    {
+      "id": "ArliAI: QwQ 32B RpR v1 (free)",
+      "name": "ArliAI: QwQ 32B RpR v1 (free)",
+      "provider": "Environment Default",
+      "capabilities": {
+        "streaming": true,
+        "functionCalling": false,
+        "vision": false,
+        "maxTokens": 4096
+      }
+    },
+    {
+      "id": "freetool",
+      "name": "freetool",
+      "provider": "Environment Default",
+      "capabilities": {
+        "streaming": true,
+        "functionCalling": false,
+        "vision": false,
+        "maxTokens": 4096
+      }
+    },
+    {
+      "id": "qwen3:0.6b",
+      "name": "qwen3:0.6b",
+      "provider": "Ollama Local",
+      "capabilities": {
+        "streaming": true,
+        "functionCalling": false,
+        "vision": false,
+        "maxTokens": 4096
+      }
+    },
+    {
+      "id": "gemma3:latest",
+      "name": "gemma3:latest",
+      "provider": "Ollama Local",
+      "capabilities": {
+        "streaming": true,
+        "functionCalling": false,
+        "vision": false,
+        "maxTokens": 4096
+      }
+    },
+    {
+      "id": "gemma3:1b",
+      "name": "gemma3:1b",
+      "provider": "Ollama Local",
+      "capabilities": {
+        "streaming": true,
+        "functionCalling": false,
+        "vision": false,
+        "maxTokens": 4096
+      }
+    },
+    {
+      "id": "phi4:14b-q4_K_M",
+      "name": "phi4:14b-q4_K_M",
+      "provider": "Ollama Local",
+      "capabilities": {
+        "streaming": true,
+        "functionCalling": false,
+        "vision": false,
+        "maxTokens": 4096
+      }
+    }
+  ]
+}

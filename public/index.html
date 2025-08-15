@@ -1,0 +1,3190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Tool Bridge - Control Center</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary: #ec4899;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+            --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            color: var(--gray-100);
+        }
+        
+        /* Layout */
+        .app-container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(148, 163, 184, 0.1);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+        }
+        
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 20px;
+            font-weight: 700;
+            color: white;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--gradient);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .nav-menu {
+            flex: 1;
+            padding: 16px 0;
+            overflow-y: auto;
+        }
+        
+        .nav-section {
+            margin-bottom: 24px;
+        }
+        
+        .nav-section-title {
+            padding: 8px 24px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--gray-400);
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 24px;
+            color: var(--gray-300);
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .nav-item:hover {
+            background: rgba(99, 102, 241, 0.1);
+            color: white;
+        }
+        
+        .nav-item.active {
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--primary-light);
+            border-left: 3px solid var(--primary);
+            padding-left: 21px;
+        }
+        
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .nav-badge {
+            margin-left: auto;
+            padding: 2px 8px;
+            background: var(--primary);
+            color: white;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* Top Bar */
+        .topbar {
+            height: 64px;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+        
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .menu-toggle {
+            display: none;
+            width: 40px;
+            height: 40px;
+            border: 1px solid var(--gray-700);
+            background: transparent;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .page-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+        
+        .status-offline .status-dot {
+            background: var(--danger);
+            animation: none;
+        }
+        
+        /* Content Area */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+        
+        .page {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Cards */
+        .card {
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .card-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        /* Grid System */
+        .grid {
+            display: grid;
+            gap: 24px;
+        }
+        
+        .grid-cols-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .grid-cols-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        .grid-cols-4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+        
+        /* Stats Cards */
+        .stat-card {
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--gradient);
+        }
+        
+        .stat-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--gray-400);
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 4px;
+        }
+        
+        .stat-change {
+            font-size: 13px;
+            color: var(--success);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        /* Forms */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--gray-300);
+        }
+        
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: 10px 16px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--gray-700);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(15, 23, 42, 0.8);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+        
+        .form-hint {
+            margin-top: 4px;
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .btn-secondary {
+            background: var(--gray-700);
+            color: white;
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--gray-600);
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-success:hover:not(:disabled) {
+            background: #059669;
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-danger:hover:not(:disabled) {
+            background: #dc2626;
+        }
+        
+        .btn-ghost {
+            background: transparent;
+            color: var(--gray-300);
+            border: 1px solid var(--gray-700);
+        }
+        
+        .btn-ghost:hover:not(:disabled) {
+            background: rgba(148, 163, 184, 0.1);
+            border-color: var(--gray-600);
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+        
+        .btn-lg {
+            padding: 14px 28px;
+            font-size: 16px;
+        }
+        
+        .btn-block {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+        
+        /* Targets List */
+        .target-item {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--gray-700);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .target-item:hover {
+            border-color: var(--gray-600);
+            background: rgba(15, 23, 42, 0.8);
+        }
+        
+        .target-item.active {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+        
+        .target-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        
+        .target-name {
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .target-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .target-status.active {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+        
+        .target-status.inactive {
+            background: rgba(148, 163, 184, 0.2);
+            color: var(--gray-400);
+        }
+        
+        .target-details {
+            font-size: 13px;
+            color: var(--gray-400);
+            line-height: 1.6;
+        }
+        
+        .target-actions {
+            margin-top: 12px;
+            display: flex;
+            gap: 8px;
+        }
+        
+        /* Chat Interface */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 180px);
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.3);
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .chat-message {
+            margin-bottom: 16px;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .message-role {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--gray-400);
+            margin-bottom: 8px;
+        }
+        
+        .message-content {
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .message-user .message-content {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: white;
+        }
+        
+        .message-assistant .message-content {
+            background: rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            color: var(--gray-200);
+        }
+        
+        .message-system .message-content {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--gray-200);
+        }
+        
+        .chat-input-container {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .chat-input {
+            flex: 1;
+        }
+        
+        /* Code Block */
+        .code-block {
+            background: var(--gray-900);
+            border: 1px solid var(--gray-700);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+            position: relative;
+            overflow-x: auto;
+        }
+        
+        .code-block pre {
+            margin: 0;
+            color: var(--gray-200);
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            padding: 6px 12px;
+            background: var(--gray-700);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .copy-btn:hover {
+            background: var(--gray-600);
+        }
+        
+        /* Alerts */
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+        }
+        
+        .alert-icon {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+        
+        .alert-info {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: var(--primary-light);
+        }
+        
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--success);
+        }
+        
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: var(--warning);
+        }
+        
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--danger);
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            border-bottom: 1px solid var(--gray-700);
+            margin-bottom: 24px;
+        }
+        
+        .tab {
+            padding: 12px 20px;
+            background: transparent;
+            border: none;
+            color: var(--gray-400);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+        }
+        
+        .tab:hover {
+            color: var(--gray-300);
+        }
+        
+        .tab.active {
+            color: var(--primary-light);
+            border-bottom-color: var(--primary);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: var(--gray-800);
+            border: 1px solid var(--gray-700);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalSlideIn 0.3s ease;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--gray-700);
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .modal-body {
+            padding: 24px;
+        }
+        
+        .modal-footer {
+            padding: 24px;
+            border-top: 1px solid var(--gray-700);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+        
+        /* Loader */
+        .loader {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--gray-600);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .grid-cols-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .grid-cols-3 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100%;
+                z-index: 999;
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .menu-toggle {
+                display: flex;
+            }
+            
+            .grid-cols-2,
+            .grid-cols-3,
+            .grid-cols-4 {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+        }
+        
+        /* API Documentation Styles */
+        .api-endpoint {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--gray-700);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+        
+        .api-endpoint-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--gray-700);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: background 0.2s;
+        }
+        
+        .api-endpoint-header:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .api-endpoint.expanded .api-endpoint-header {
+            background: rgba(59, 130, 246, 0.05);
+        }
+        
+        .api-method {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        
+        .api-method.get { background: var(--info); color: white; }
+        .api-method.post { background: var(--success); color: white; }
+        .api-method.put { background: var(--warning); color: white; }
+        .api-method.delete { background: var(--danger); color: white; }
+        
+        .api-path {
+            font-family: monospace;
+            font-size: 14px;
+            color: white;
+            flex: 1;
+        }
+        
+        .api-description {
+            color: var(--gray-400);
+            font-size: 13px;
+        }
+        
+        .api-endpoint-body {
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .api-endpoint.expanded .api-endpoint-body {
+            max-height: 2000px;
+            padding: 20px;
+        }
+        
+        .api-section {
+            margin-bottom: 24px;
+        }
+        
+        .api-section-title {
+            color: var(--gray-300);
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        
+        .api-try-it {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--gray-700);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 20px;
+        }
+        
+        .api-response {
+            background: var(--gray-900);
+            border: 1px solid var(--gray-700);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+            font-family: monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .schema-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .schema-table th,
+        .schema-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--gray-700);
+        }
+        
+        .schema-table th {
+            background: rgba(15, 23, 42, 0.5);
+            color: var(--gray-300);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        
+        .schema-table td {
+            color: var(--gray-300);
+            font-size: 13px;
+        }
+        
+        .schema-type {
+            color: var(--primary);
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .schema-required {
+            background: var(--danger);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        
+        .api-expand-icon {
+            transition: transform 0.3s;
+        }
+        
+        .api-endpoint.expanded .api-expand-icon {
+            transform: rotate(90deg);
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--gray-800);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--gray-600);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--gray-500);
+        }
+        
+        /* Tooltips */
+        .tooltip {
+            position: relative;
+        }
+        
+        .tooltip-text {
+            visibility: hidden;
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--gray-900);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        /* Switch Toggle */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .switch-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--gray-700);
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+        
+        .switch-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+        
+        .switch input:checked + .switch-slider {
+            background: var(--primary);
+        }
+        
+        .switch input:checked + .switch-slider:before {
+            transform: translateX(24px);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">🚀</div>
+                    <span>LLM Tool Bridge</span>
+                </div>
+            </div>
+            
+            <div class="nav-menu">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main</div>
+                    <button class="nav-item active" onclick="showPage('dashboard')">
+                        <span class="nav-icon">📊</span>
+                        <span>Dashboard</span>
+                    </button>
+                    <button class="nav-item" onclick="showPage('playground')">
+                        <span class="nav-icon">🎮</span>
+                        <span>Playground</span>
+                        <span class="nav-badge">Test</span>
+                    </button>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Configuration</div>
+                    <button class="nav-item" onclick="showPage('targets')">
+                        <span class="nav-icon">🎯</span>
+                        <span>LLM Targets</span>
+                    </button>
+                    <button class="nav-item" onclick="showPage('security')">
+                        <span class="nav-icon">🔐</span>
+                        <span>API Keys</span>
+                    </button>
+                    <button class="nav-item" onclick="showPage('settings')">
+                        <span class="nav-icon">⚙️</span>
+                        <span>Settings</span>
+                    </button>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Developer</div>
+                    <button class="nav-item" onclick="showPage('api-docs')">
+                        <span class="nav-icon">📚</span>
+                        <span>API Documentation</span>
+                    </button>
+                    <button class="nav-item" onclick="showPage('logs')">
+                        <span class="nav-icon">📝</span>
+                        <span>Logs</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()">☰</button>
+                    <h1 class="page-title" id="pageTitle">Dashboard</h1>
+                </div>
+                <div class="topbar-right">
+                    <div class="status-indicator" id="statusIndicator">
+                        <span class="status-dot"></span>
+                        <span id="statusText">Connecting...</span>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Content Area -->
+            <div class="content">
+                <!-- Dashboard Page -->
+                <div id="dashboard" class="page active">
+                    <div class="grid grid-cols-4">
+                        <div class="stat-card">
+                            <div class="stat-label">Active Target</div>
+                            <div class="stat-value" id="activeTargetName">None</div>
+                            <div class="stat-change">Configure in LLM Targets</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Proxy Status</div>
+                            <div class="stat-value" id="proxyStatusValue">Offline</div>
+                            <div class="stat-change">Port: <span id="proxyPort">3500</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Admin API</div>
+                            <div class="stat-value" id="adminStatusValue">Offline</div>
+                            <div class="stat-change">Port: <span id="adminPort">3501</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Security</div>
+                            <div class="stat-value" id="securityStatus">Open</div>
+                            <div class="stat-change" id="securityInfo">No API key required</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Exposed Endpoints Card -->
+                    <div class="card" style="margin-bottom: 20px;">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <span>🌐</span>
+                                Exposed API Endpoints
+                            </h2>
+                        </div>
+                        <div class="grid grid-cols-2" style="gap: 16px;">
+                            <div style="padding: 16px; background: rgba(15, 23, 42, 0.5); border-radius: 8px;">
+                                <h4 style="color: var(--primary); margin-bottom: 12px;">Main Proxy Endpoints</h4>
+                                <div style="font-family: monospace; font-size: 13px; line-height: 1.8;">
+                                    <div style="margin-bottom: 8px;">
+                                        <span style="color: var(--success);">POST</span>
+                                        <span style="color: white;">http://localhost:<span id="endpointPort1">3500</span>/v1/chat/completions</span>
+                                    </div>
+                                    <div style="margin-bottom: 8px;">
+                                        <span style="color: var(--info);">GET</span>
+                                        <span style="color: white;">http://localhost:<span id="endpointPort2">3500</span>/v1/models</span>
+                                    </div>
+                                    <div>
+                                        <span style="color: var(--info);">GET</span>
+                                        <span style="color: white;">http://localhost:<span id="endpointPort3">3500</span>/health</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="padding: 16px; background: rgba(15, 23, 42, 0.5); border-radius: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h4 style="color: var(--primary); margin: 0;">Available Models</h4>
+                                    <button class="btn btn-sm" onclick="reloadDashboardModels()" style="padding: 4px 12px; font-size: 12px;">
+                                        🔄 Reload
+                                    </button>
+                                </div>
+                                <input type="text" 
+                                       id="dashboardModelFilter" 
+                                       class="form-input" 
+                                       placeholder="Filter models..." 
+                                       oninput="filterDashboardModels()"
+                                       style="margin-bottom: 8px; padding: 6px 10px; font-size: 13px;">
+                                <div id="dashboardModelsList" style="max-height: 120px; overflow-y: auto;">
+                                    <div style="color: var(--gray-400); font-size: 13px;">Loading models...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- API Parameters Card -->
+                    <div class="card" style="margin-bottom: 20px;">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <span>⚙️</span>
+                                API Parameters
+                            </h2>
+                        </div>
+                        <div class="grid grid-cols-3" style="gap: 16px;">
+                            <div style="padding: 12px; background: rgba(15, 23, 42, 0.5); border-radius: 8px;">
+                                <h5 style="color: var(--gray-400); font-size: 12px; margin-bottom: 8px;">REQUIRED PARAMETERS</h5>
+                                <code style="display: block; color: var(--success); font-size: 13px; line-height: 1.6;">
+                                    model: string<br>
+                                    messages: Message[]
+                                </code>
+                            </div>
+                            <div style="padding: 12px; background: rgba(15, 23, 42, 0.5); border-radius: 8px;">
+                                <h5 style="color: var(--gray-400); font-size: 12px; margin-bottom: 8px;">OPTIONAL PARAMETERS</h5>
+                                <code style="display: block; color: var(--info); font-size: 13px; line-height: 1.6;">
+                                    stream: boolean<br>
+                                    temperature: number<br>
+                                    max_tokens: number<br>
+                                    tools: Tool[]<br>
+                                    tool_choice: string
+                                </code>
+                            </div>
+                            <div style="padding: 12px; background: rgba(15, 23, 42, 0.5); border-radius: 8px;">
+                                <h5 style="color: var(--gray-400); font-size: 12px; margin-bottom: 8px;">AUTHENTICATION</h5>
+                                <div id="authStatus" style="font-size: 13px; line-height: 1.6;">
+                                    <span style="color: var(--gray-300);">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <span>🚀</span>
+                                Quick Start Guide
+                            </h2>
+                        </div>
+                        <div class="alert alert-info">
+                            <span class="alert-icon">ℹ️</span>
+                            <div>
+                                <strong>Welcome to LLM Tool Bridge!</strong><br>
+                                This proxy enables tool/function calling for any LLM by converting OpenAI-style tool calls into prompts.
+                            </div>
+                        </div>
+                        
+                        <h3 style="margin: 20px 0 12px 0; color: white;">Getting Started:</h3>
+                        <ol style="line-height: 1.8; color: var(--gray-300);">
+                            <li><strong>Configure a Target:</strong> Go to "LLM Targets" and add your LLM endpoint</li>
+                            <li><strong>Test Connection:</strong> Use the Playground to test your setup</li>
+                            <li><strong>Secure Your API:</strong> Set up API keys in the Security section</li>
+                            <li><strong>Integrate:</strong> Use the API Documentation to integrate with your client</li>
+                        </ol>
+                        
+                        <div class="btn-group" style="margin-top: 20px;">
+                            <button class="btn btn-primary" onclick="showPage('targets')">
+                                Configure Target
+                            </button>
+                            <button class="btn btn-secondary" onclick="showPage('api-docs')">
+                                View API Docs
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Playground Page -->
+                <div id="playground" class="page">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <span>🎮</span>
+                                Test Your Configuration
+                            </h2>
+                        </div>
+                        
+                        <!-- Model Selection -->
+                        <div class="card" style="margin-bottom: 20px; padding: 16px; background: rgba(15, 23, 42, 0.5);">
+                            <div style="display: flex; gap: 16px; align-items: end;">
+                                <div class="form-group" style="flex: 1; margin: 0;">
+                                    <label class="form-label">Select Model</label>
+                                    <select class="form-input" 
+                                            id="testModelSelect" 
+                                            onchange="selectModel(this.value)">
+                                        <option value="">Loading models...</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-secondary" onclick="refreshModels()" style="height: 42px;">
+                                    🔄 Refresh
+                                </button>
+                            </div>
+                            <div id="modelInfo" style="margin-top: 12px; font-size: 13px; color: var(--gray-400);"></div>
+                        </div>
+                        
+                        <div class="tabs">
+                            <button class="tab active" onclick="showTab('simple-test')">Simple Test</button>
+                            <button class="tab" onclick="showTab('tool-test')">Tool Calling Test</button>
+                            <button class="tab" onclick="showTab('streaming-test')">Streaming Test</button>
+                        </div>
+                        
+                        <div id="simple-test" class="tab-content active">
+                            <div class="form-group">
+                                <label class="form-label">Test Message</label>
+                                <textarea class="form-textarea" id="simpleMessage" placeholder="Enter a message...">Hello! Can you tell me a joke?</textarea>
+                            </div>
+                            <button class="btn btn-primary" onclick="sendSimpleTest()">
+                                Send Message
+                            </button>
+                        </div>
+                        
+                        <div id="tool-test" class="tab-content">
+                            <div class="form-group">
+                                <label class="form-label">Message with Tool Calling</label>
+                                <textarea class="form-textarea" id="toolMessage" placeholder="Enter a message...">What's the weather in New York and calculate 25 * 4 for me?</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <input type="checkbox" id="includeTools" checked> Include sample tools
+                                </label>
+                                <div class="form-hint">Includes weather, calculator, and web search tools</div>
+                            </div>
+                            <button class="btn btn-primary" onclick="sendToolTest()">
+                                Send with Tools
+                            </button>
+                        </div>
+                        
+                        <div id="streaming-test" class="tab-content">
+                            <div class="form-group">
+                                <label class="form-label">Streaming Message</label>
+                                <textarea class="form-textarea" id="streamMessage" placeholder="Enter a message...">Write a short story about a robot learning to paint.</textarea>
+                            </div>
+                            <button class="btn btn-primary" onclick="sendStreamTest()">
+                                Start Streaming
+                            </button>
+                        </div>
+                        
+                        <div class="chat-messages" id="testResults" style="margin-top: 20px; min-height: 200px;">
+                            <div style="text-align: center; color: var(--gray-500); padding: 40px;">
+                                Test results will appear here...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- LLM Targets Page -->
+                <div id="targets" class="page">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <span>🎯</span>
+                                LLM Target Configuration
+                            </h2>
+                            <div class="card-actions">
+                                <button class="btn btn-primary btn-sm" onclick="showAddTargetModal()">
+                                    + Add Target
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="targetsList">
+                            <div style="text-align: center; color: var(--gray-500); padding: 40px;">
+                                No targets configured. Click "Add Target" to get started.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Security Page -->
+                <div id="security" class="page">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <span>🔐</span>
+                                API Key Management
+                            </h2>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <span class="alert-icon">ℹ️</span>
+                            <div>
+                                <strong>API Security:</strong><br>
+                                • <strong>Admin Interface:</strong> Always open access - no authentication required<br>
+                                • <strong>Chat API Endpoint:</strong> Optional API key for /v1/chat/completions endpoint<br>
+                                • Set a Chat API key if you want to restrict access to the proxy service
+                            </div>
+                        </div>
+                        
+                        <div style="max-width: 600px; margin: 0 auto;">
+                            <h3 style="margin-bottom: 16px; color: white;">Chat API Security</h3>
+                            <div class="form-group">
+                                <label class="form-label">Current Status</label>
+                                <div id="chatKeyStatus" style="padding: 12px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; color: var(--success);">
+                                    No API key required (open access)
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Set Chat API Key (Optional)</label>
+                                <input type="password" class="form-input" id="newChatKey" placeholder="Enter API key for chat endpoint">
+                                <div class="form-hint">If set, clients must provide this key in the Authorization header when calling /v1/chat/completions</div>
+                            </div>
+                            <button class="btn btn-primary" onclick="setChatApiKey()">
+                                Set Chat API Key
+                            </button>
+                            <button class="btn btn-secondary" onclick="removeChatApiKey()" style="margin-left: 10px;">
+                                Remove API Key
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Settings Page -->
+                <div id="settings" class="page">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <span>⚙️</span>
+                                Proxy Settings
+                            </h2>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Proxy Port</label>
+                                <input type="number" class="form-input" id="settingsProxyPort" value="3500">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Admin Port</label>
+                                <input type="number" class="form-input" id="settingsAdminPort" value="3501">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">CORS Origins</label>
+                            <input type="text" class="form-input" id="corsOrigins" value="*">
+                            <div class="form-hint">Comma-separated list of allowed origins, or * for all</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Max Request Size</label>
+                            <input type="text" class="form-input" id="maxRequestSize" value="50mb">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="enableLogging" checked> Enable Request Logging
+                            </label>
+                        </div>
+                        
+                        <button class="btn btn-primary" onclick="saveSettings()">
+                            Save Settings
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- API Documentation Page -->
+                <div id="api-docs" class="page">
+                    <div class="card">
+                        <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+                            <h2 class="card-title">
+                                <span>⚡</span>
+                                LLM Tool Bridge API
+                                <span style="font-size: 14px; color: var(--gray-400); margin-left: 12px;">v1.0.0</span>
+                            </h2>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <a href="/swagger.json" target="_blank" class="btn btn-ghost btn-sm" style="text-decoration: none;">
+                                    📄 OpenAPI Spec
+                                </a>
+                                <span style="background: var(--success); padding: 4px 12px; border-radius: 16px; font-size: 12px; color: white;">OpenAI Compatible</span>
+                                <span style="background: var(--primary); padding: 4px 12px; border-radius: 16px; font-size: 12px; color: white;">Tool Calling</span>
+                            </div>
+                        </div>
+                        
+                        <div style="padding: 20px; border-bottom: 1px solid var(--gray-700);">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div>
+                                    <h4 style="color: var(--gray-300); font-size: 12px; text-transform: uppercase; margin-bottom: 8px;">Base URL</h4>
+                                    <div style="font-family: monospace; color: white; background: rgba(15, 23, 42, 0.5); padding: 8px 12px; border-radius: 6px;">
+                                        http://localhost:<span id="apiDocPort">3500</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 style="color: var(--gray-300); font-size: 12px; text-transform: uppercase; margin-bottom: 8px;">Authentication</h4>
+                                    <div style="font-family: monospace; color: white; background: rgba(15, 23, 42, 0.5); padding: 8px 12px; border-radius: 6px;" id="apiAuthStatus">
+                                        No authentication required
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 20px; padding: 16px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px;">
+                                <h4 style="color: var(--primary); font-size: 14px; margin-bottom: 12px;">📄 OpenAPI Specification</h4>
+                                <div style="display: flex; gap: 12px; align-items: center;">
+                                    <div style="flex: 1; font-family: monospace; color: white; background: rgba(15, 23, 42, 0.8); padding: 10px 14px; border-radius: 6px; font-size: 13px;">
+                                        http://localhost:<span id="swaggerPort">3500</span>/swagger.json
+                                    </div>
+                                    <button class="btn btn-sm" onclick="copySwaggerUrl()" style="padding: 8px 16px;">
+                                        📋 Copy URL
+                                    </button>
+                                    <a href="/swagger.json" target="_blank" class="btn btn-primary btn-sm" style="text-decoration: none; padding: 8px 16px;">
+                                        🔗 Open
+                                    </a>
+                                </div>
+                                <div style="margin-top: 10px; color: var(--gray-400); font-size: 12px;">
+                                    Use this URL to import the API into Postman, Swagger UI, or generate client SDKs
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="padding: 20px;">
+                            <h3 style="color: white; margin-bottom: 20px;">API Endpoints</h3>
+                            
+                            <!-- Chat Completions Endpoint -->
+                            <div class="api-endpoint" id="endpoint-chat">
+                                <div class="api-endpoint-header" onclick="toggleEndpoint('chat')">
+                                    <span class="api-expand-icon">▶</span>
+                                    <span class="api-method post">POST</span>
+                                    <span class="api-path">/v1/chat/completions</span>
+                                    <span class="api-description">Create chat completion with tool calling</span>
+                                </div>
+                                <div class="api-endpoint-body">
+                                    <div class="api-section">
+                                        <div class="api-section-title">Request Body Schema</div>
+                                        <table class="schema-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Field</th>
+                                                    <th>Type</th>
+                                                    <th>Required</th>
+                                                    <th>Description</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>model</td>
+                                                    <td><span class="schema-type">string</span></td>
+                                                    <td><span class="schema-required">Required</span></td>
+                                                    <td>Model ID to use</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>messages</td>
+                                                    <td><span class="schema-type">array[Message]</span></td>
+                                                    <td><span class="schema-required">Required</span></td>
+                                                    <td>Array of messages</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>tools</td>
+                                                    <td><span class="schema-type">array[Tool]</span></td>
+                                                    <td></td>
+                                                    <td>Available tools/functions</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>stream</td>
+                                                    <td><span class="schema-type">boolean</span></td>
+                                                    <td></td>
+                                                    <td>Stream response (SSE)</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>temperature</td>
+                                                    <td><span class="schema-type">number</span></td>
+                                                    <td></td>
+                                                    <td>Sampling temperature (0-2)</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>max_tokens</td>
+                                                    <td><span class="schema-type">integer</span></td>
+                                                    <td></td>
+                                                    <td>Maximum tokens to generate</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <div class="api-section">
+                                        <div class="api-section-title">Example Request</div>
+                                        <div class="code-block">
+                                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                                            <pre>{
+  "model": "gpt-3.5-turbo",
+  "messages": [
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "What's the weather in San Francisco?"}
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "get_weather",
+        "description": "Get current weather",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "location": {"type": "string"}
+          },
+          "required": ["location"]
+        }
+      }
+    }
+  ],
+  "stream": false
+}</pre>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="api-try-it">
+                                        <h4 style="color: white; margin-bottom: 16px;">Try it out</h4>
+                                        <div style="margin-bottom: 12px;">
+                                            <label style="display: block; color: var(--gray-300); margin-bottom: 6px; font-size: 13px;">Request Body</label>
+                                            <textarea id="chatRequestBody" class="form-input" style="font-family: monospace; min-height: 200px;">{
+  "model": "gpt-3.5-turbo",
+  "messages": [
+    {"role": "user", "content": "Hello!"}
+  ],
+  "stream": false
+}</textarea>
+                                        </div>
+                                        <button class="btn btn-primary" onclick="tryApiEndpoint('chat')">Execute Request</button>
+                                        <div id="chatResponse" class="api-response" style="display: none;">
+                                            <div style="color: var(--gray-400); margin-bottom: 8px; font-size: 12px;">Response</div>
+                                            <pre id="chatResponseBody"></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Models Endpoint -->
+                            <div class="api-endpoint" id="endpoint-models">
+                                <div class="api-endpoint-header" onclick="toggleEndpoint('models')">
+                                    <span class="api-expand-icon">▶</span>
+                                    <span class="api-method get">GET</span>
+                                    <span class="api-path">/v1/models</span>
+                                    <span class="api-description">List available models</span>
+                                </div>
+                                <div class="api-endpoint-body">
+                                    <div class="api-section">
+                                        <div class="api-section-title">Response Schema</div>
+                                        <div class="code-block">
+                                            <pre>{
+  "object": "list",
+  "data": [
+    {
+      "id": "model-id",
+      "object": "model",
+      "created": 1234567890,
+      "owned_by": "provider-name"
+    }
+  ]
+}</pre>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="api-try-it">
+                                        <h4 style="color: white; margin-bottom: 16px;">Try it out</h4>
+                                        <button class="btn btn-primary" onclick="tryApiEndpoint('models')">Execute Request</button>
+                                        <div id="modelsResponse" class="api-response" style="display: none;">
+                                            <div style="color: var(--gray-400); margin-bottom: 8px; font-size: 12px;">Response</div>
+                                            <pre id="modelsResponseBody"></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Health Endpoint -->
+                            <div class="api-endpoint" id="endpoint-health">
+                                <div class="api-endpoint-header" onclick="toggleEndpoint('health')">
+                                    <span class="api-expand-icon">▶</span>
+                                    <span class="api-method get">GET</span>
+                                    <span class="api-path">/health</span>
+                                    <span class="api-description">Check service health</span>
+                                </div>
+                                <div class="api-endpoint-body">
+                                    <div class="api-section">
+                                        <div class="api-section-title">Response Schema</div>
+                                        <div class="code-block">
+                                            <pre>{
+  "status": "healthy",
+  "activeTarget": "target-name",
+  "adminPort": 3501
+}</pre>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="api-try-it">
+                                        <h4 style="color: white; margin-bottom: 16px;">Try it out</h4>
+                                        <button class="btn btn-primary" onclick="tryApiEndpoint('health')">Execute Request</button>
+                                        <div id="healthResponse" class="api-response" style="display: none;">
+                                            <div style="color: var(--gray-400); margin-bottom: 8px; font-size: 12px;">Response</div>
+                                            <pre id="healthResponseBody"></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Admin Endpoints Section -->
+                            <h3 style="color: white; margin-top: 40px; margin-bottom: 20px;">Admin API Endpoints</h3>
+                            <div style="background: rgba(15, 23, 42, 0.3); padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+                                <p style="color: var(--gray-400); font-size: 13px; margin: 0;">
+                                    Admin API is available at port <strong id="adminApiPort">3501</strong>
+                                </p>
+                            </div>
+                            
+                            <!-- Get Targets Endpoint -->
+                            <div class="api-endpoint" id="endpoint-targets">
+                                <div class="api-endpoint-header" onclick="toggleEndpoint('targets')">
+                                    <span class="api-expand-icon">▶</span>
+                                    <span class="api-method get">GET</span>
+                                    <span class="api-path">/api/admin/targets</span>
+                                    <span class="api-description">List all LLM targets</span>
+                                </div>
+                                <div class="api-endpoint-body">
+                                    <div class="api-try-it">
+                                        <h4 style="color: white; margin-bottom: 16px;">Try it out</h4>
+                                        <button class="btn btn-primary" onclick="tryApiEndpoint('targets')">Execute Request</button>
+                                        <div id="targetsResponse" class="api-response" style="display: none;">
+                                            <div style="color: var(--gray-400); margin-bottom: 8px; font-size: 12px;">Response</div>
+                                            <pre id="targetsResponseBody"></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Get Admin Models Endpoint -->
+                            <div class="api-endpoint" id="endpoint-admin-models">
+                                <div class="api-endpoint-header" onclick="toggleEndpoint('admin-models')">
+                                    <span class="api-expand-icon">▶</span>
+                                    <span class="api-method get">GET</span>
+                                    <span class="api-path">/api/admin/models</span>
+                                    <span class="api-description">List cached models</span>
+                                </div>
+                                <div class="api-endpoint-body">
+                                    <div class="api-try-it">
+                                        <h4 style="color: white; margin-bottom: 16px;">Try it out</h4>
+                                        <button class="btn btn-primary" onclick="tryApiEndpoint('admin-models')">Execute Request</button>
+                                        <div id="admin-modelsResponse" class="api-response" style="display: none;">
+                                            <div style="color: var(--gray-400); margin-bottom: 8px; font-size: 12px;">Response</div>
+                                            <pre id="admin-modelsResponseBody"></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Logs Page -->
+                <div id="logs" class="page">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <span>📝</span>
+                                Request Logs
+                            </h2>
+                            <div class="card-actions">
+                                <button class="btn btn-secondary btn-sm" onclick="refreshLogs()">
+                                    Refresh
+                                </button>
+                                <button class="btn btn-ghost btn-sm" onclick="clearLogs()">
+                                    Clear
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="logsContainer" style="background: var(--gray-900); border-radius: 8px; padding: 16px; font-family: monospace; font-size: 13px; color: var(--gray-300); height: 500px; overflow-y: auto;">
+                            <div style="color: var(--gray-500);">Logs will appear here...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add/Edit Target Modal -->
+    <div class="modal" id="targetModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Add LLM Target</h3>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Preset Configuration</label>
+                    <div class="grid grid-cols-3" style="gap: 8px;">
+                        <button class="btn btn-ghost btn-sm" onclick="applyPreset('ollama')">🦙 Ollama</button>
+                        <button class="btn btn-ghost btn-sm" onclick="applyPreset('lmstudio')">🎨 LM Studio</button>
+                        <button class="btn btn-ghost btn-sm" onclick="applyPreset('openai')">🤖 OpenAI</button>
+                        <button class="btn btn-ghost btn-sm" onclick="applyPreset('anthropic')">🧠 Anthropic</button>
+                        <button class="btn btn-ghost btn-sm" onclick="applyPreset('groq')">⚡ Groq</button>
+                        <button class="btn btn-ghost btn-sm" onclick="applyPreset('openrouter')">🌐 OpenRouter</button>
+                        <button class="btn btn-ghost btn-sm" onclick="applyPreset('custom')">⚙️ Custom</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Target Name</label>
+                    <input type="text" class="form-input" id="targetName" placeholder="e.g., Local Ollama">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Endpoint URL</label>
+                    <input type="text" class="form-input" id="targetUrl" placeholder="http://localhost:11434/v1/chat/completions">
+                    <div class="form-hint">Full URL to the chat completions endpoint</div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Available Models</label>
+                    <div style="display: flex; gap: 10px;">
+                        <select class="form-input" id="targetModel" style="flex: 1;">
+                        </select>
+                        <button type="button" class="btn btn-secondary" onclick="fetchTargetModels()" id="fetchModelsBtn">
+                            🔍 Fetch Models
+                        </button>
+                    </div>
+                    <div class="form-hint" id="modelFetchHint">Click "Fetch Models" to see models available at this endpoint</div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">API Key (if required)</label>
+                    <input type="password" class="form-input" id="targetApiKey" placeholder="Leave blank if not required">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="targetEnabled" checked> Enable this target
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveTarget()">Save Target</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // State Management
+        let state = {
+            chatApiKey: localStorage.getItem('chatApiKey') || '',
+            targets: [],
+            currentPage: 'dashboard',
+            selectedTarget: null,
+            selectedModel: null,
+            proxyPort: 3500,
+            adminPort: 3501,
+            ports: {
+                proxy: 3500,
+                admin: 3501
+            }
+        };
+        
+        // Presets for LLM configurations
+        const presets = {
+            ollama: {
+                name: 'Ollama Local',
+                url: 'http://localhost:11434/v1/chat/completions',
+                apiKey: ''
+            },
+            lmstudio: {
+                name: 'LM Studio',
+                url: 'http://localhost:1234/v1/chat/completions',
+                apiKey: ''
+            },
+            openai: {
+                name: 'OpenAI',
+                url: 'https://api.openai.com/v1/chat/completions',
+                apiKey: ''
+            },
+            anthropic: {
+                name: 'Anthropic Claude',
+                url: 'https://api.anthropic.com/v1/messages',
+                apiKey: ''
+            },
+            groq: {
+                name: 'Groq Cloud',
+                url: 'https://api.groq.com/openai/v1/chat/completions',
+                apiKey: ''
+            },
+            openrouter: {
+                name: 'OpenRouter',
+                url: 'https://openrouter.ai/api/v1/chat/completions',
+                apiKey: ''
+            },
+            custom: {
+                name: '',
+                url: '',
+                apiKey: ''
+            }
+        };
+        
+        // Model management functions
+        let availableModels = [];
+        
+        async function fetchModels() {
+            try {
+                const response = await fetch(`http://localhost:${state.ports.proxy}/v1/models`, {
+                    cache: 'no-cache'  // Force fresh fetch
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.data || [];
+                }
+            } catch (error) {
+                console.error('Failed to fetch models:', error);
+            }
+            return [];
+        }
+        
+        async function refreshModels() {
+            const select = document.getElementById('testModelSelect');
+            const modelInfo = document.getElementById('modelInfo');
+            
+            // Show loading state
+            select.innerHTML = '<option value="">Loading models...</option>';
+            modelInfo.innerHTML = '<span style="color: var(--gray-400);">Fetching models from backend...</span>';
+            
+            // Force re-fetch from backend
+            availableModels = [];  // Clear cache
+            const models = await fetchModels();
+            
+            if (models.length === 0) {
+                // No models available from backend
+                availableModels = [];
+                select.innerHTML = '<option value="">No models available from backend</option>';
+                modelInfo.innerHTML = '<span style="color: var(--gray-400);">Please configure and test your LLM target to fetch available models.</span>';
+                return;
+            }
+            
+            // Update available models
+            availableModels = models;
+            populateModelList();
+            
+            // Show success feedback
+            modelInfo.innerHTML = `<span style="color: var(--success);">✓ Loaded ${models.length} model${models.length > 1 ? 's' : ''} from backend</span>`;
+            setTimeout(() => {
+                updateModelInfo();
+            }, 2000);
+        }
+        
+        function populateModelList() {
+            const select = document.getElementById('testModelSelect');
+            
+            if (availableModels.length === 0) {
+                select.innerHTML = '<option value="">No models available</option>';
+                return;
+            }
+            
+            // Group models by provider
+            const modelsByProvider = {};
+            availableModels.forEach(model => {
+                const provider = model.owned_by || 'Unknown';
+                if (!modelsByProvider[provider]) {
+                    modelsByProvider[provider] = [];
+                }
+                modelsByProvider[provider].push(model);
+            });
+            
+            // Clear and rebuild with optgroups
+            select.innerHTML = '';
+            
+            // Sort providers and create optgroups
+            Object.keys(modelsByProvider).sort().forEach(provider => {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = `${provider} (${modelsByProvider[provider].length} models)`;
+                
+                modelsByProvider[provider].forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = model.id;
+                    optgroup.appendChild(option);
+                });
+                
+                select.appendChild(optgroup);
+            });
+            
+            // Set default selection
+            const activeTarget = state.targets.find(t => t.enabled);
+            if (activeTarget && activeTarget.model) {
+                const modelExists = availableModels.find(m => m.id === activeTarget.model);
+                if (modelExists) {
+                    select.value = activeTarget.model;
+                    state.selectedModel = activeTarget.model;
+                }
+            } else if (availableModels.length > 0) {
+                select.value = availableModels[0].id;
+                state.selectedModel = availableModels[0].id;
+            }
+            
+            updateModelInfo();
+        }
+        
+        function selectModel(modelId) {
+            if (modelId) {
+                state.selectedModel = modelId;
+                updateModelInfo();
+            }
+        }
+        
+        function updateModelInfo() {
+            const modelInfo = document.getElementById('modelInfo');
+            const selectedModel = availableModels.find(m => m.id === state.selectedModel);
+            
+            if (selectedModel) {
+                const provider = selectedModel.owned_by || 'Unknown';
+                // Find the target that provides this model
+                const target = state.targets.find(t => t.name === provider && t.enabled);
+                
+                let targetInfo = '';
+                if (target) {
+                    // Extract base URL for display
+                    const url = new URL(target.url);
+                    const baseUrl = `${url.protocol}//${url.host}`;
+                    targetInfo = `
+                        <span style="color: var(--gray-500);">•</span> 
+                        <strong>Endpoint:</strong> <span style="color: var(--info); font-family: monospace; font-size: 12px;">${baseUrl}</span>
+                    `;
+                }
+                
+                modelInfo.innerHTML = `
+                    <div style="padding: 8px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 6px;">
+                        <strong>Model:</strong> <span style="color: var(--primary);">${selectedModel.id}</span>
+                        <span style="color: var(--gray-500);">•</span> 
+                        <strong>Provider:</strong> ${provider}
+                        ${targetInfo}
+                    </div>
+                `;
+            } else {
+                modelInfo.textContent = '';
+            }
+        }
+        
+        // Store dashboard models globally for filtering
+        let dashboardModels = [];
+        
+        // Update dashboard information
+        async function updateDashboardInfo() {
+            // Update endpoint ports
+            document.getElementById('endpointPort1').textContent = state.proxyPort;
+            document.getElementById('endpointPort2').textContent = state.proxyPort;
+            document.getElementById('endpointPort3').textContent = state.proxyPort;
+            
+            // Update models list
+            await loadDashboardModels();
+            
+            // Update authentication status
+            await updateAuthStatus();
+        }
+        
+        // Load models for dashboard
+        async function loadDashboardModels(showLoading = true) {
+            const modelsList = document.getElementById('dashboardModelsList');
+            if (modelsList) {
+                if (showLoading) {
+                    modelsList.innerHTML = '<div style="color: var(--gray-400); font-size: 13px;">Loading models...</div>';
+                }
+                try {
+                    const response = await fetch(`http://localhost:${state.proxyPort}/v1/models`, {
+                        cache: 'no-cache'
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.data && data.data.length > 0) {
+                            // Only update if models have changed
+                            const newModelsStr = JSON.stringify(data.data);
+                            const oldModelsStr = JSON.stringify(dashboardModels);
+                            if (newModelsStr !== oldModelsStr) {
+                                dashboardModels = data.data;
+                                displayDashboardModels(dashboardModels);
+                            }
+                        } else if (dashboardModels.length > 0) {
+                            dashboardModels = [];
+                            modelsList.innerHTML = '<div style="color: var(--gray-400); font-size: 13px;">No models available</div>';
+                        }
+                    }
+                } catch (error) {
+                    if (dashboardModels.length > 0) {
+                        dashboardModels = [];
+                        modelsList.innerHTML = '<div style="color: var(--error); font-size: 13px;">Failed to load models</div>';
+                    }
+                }
+            }
+        }
+        
+        // Display models in dashboard
+        function displayDashboardModels(models) {
+            const modelsList = document.getElementById('dashboardModelsList');
+            if (models.length > 0) {
+                // Group models by provider
+                const modelsByProvider = {};
+                models.forEach(model => {
+                    const provider = model.owned_by || 'Unknown';
+                    if (!modelsByProvider[provider]) {
+                        modelsByProvider[provider] = [];
+                    }
+                    modelsByProvider[provider].push(model);
+                });
+                
+                // Generate HTML grouped by provider
+                let html = '';
+                Object.keys(modelsByProvider).sort().forEach(provider => {
+                    html += `
+                        <div style="margin-bottom: 12px;">
+                            <div style="color: var(--primary); font-size: 12px; font-weight: 600; margin-bottom: 6px; padding: 4px 0; border-bottom: 1px solid var(--gray-700);">
+                                📦 ${provider} (${modelsByProvider[provider].length})
+                            </div>
+                            ${modelsByProvider[provider].map(model => `
+                                <div class="dashboard-model-item" style="padding: 4px 0 4px 12px; color: white; font-size: 12px;">
+                                    • ${model.id}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                });
+                
+                modelsList.innerHTML = html;
+            } else {
+                modelsList.innerHTML = '<div style="color: var(--gray-400); font-size: 13px;">No models match filter</div>';
+            }
+        }
+        
+        // Reload dashboard models
+        async function reloadDashboardModels() {
+            const filterInput = document.getElementById('dashboardModelFilter');
+            if (filterInput) {
+                filterInput.value = ''; // Clear filter
+            }
+            await loadDashboardModels();
+            
+            // Show feedback
+            const modelsList = document.getElementById('dashboardModelsList');
+            if (dashboardModels.length > 0) {
+                const tempContent = modelsList.innerHTML;
+                modelsList.innerHTML = `<div style="color: var(--success); font-size: 13px;">✓ Reloaded ${dashboardModels.length} model(s)</div>`;
+                setTimeout(() => {
+                    displayDashboardModels(dashboardModels);
+                }, 1000);
+            }
+        }
+        
+        // Filter dashboard models
+        function filterDashboardModels() {
+            const filterInput = document.getElementById('dashboardModelFilter');
+            const filter = filterInput.value.toLowerCase();
+            
+            if (!filter) {
+                displayDashboardModels(dashboardModels);
+                return;
+            }
+            
+            const filtered = dashboardModels.filter(model => 
+                model.id.toLowerCase().includes(filter) ||
+                (model.owned_by && model.owned_by.toLowerCase().includes(filter))
+            );
+            
+            displayDashboardModels(filtered);
+        }
+        
+        // Update authentication status in dashboard
+        async function updateAuthStatus() {
+            const authStatus = document.getElementById('authStatus');
+            if (authStatus) {
+                const config = await fetch(`http://localhost:${state.adminPort}/api/admin/config/proxy`);
+                if (config.ok) {
+                    const data = await config.json();
+                    if (data.chatApiKey) {
+                        authStatus.innerHTML = `
+                            <div style="color: var(--warning);">
+                                <strong>Chat API:</strong> API Key Required<br>
+                                <code style="font-size: 11px;">Authorization: Bearer &lt;key&gt;</code>
+                            </div>
+                        `;
+                    } else {
+                        authStatus.innerHTML = `
+                            <div style="color: var(--success);">
+                                <strong>Open Access</strong><br>
+                                <span style="font-size: 12px; color: var(--gray-400);">No authentication required</span>
+                            </div>
+                        `;
+                    }
+                }
+            }
+        }
+        
+        // Initialize on load
+        window.onload = function() {
+            checkAuthentication();
+            checkStatus();
+            loadTargets();
+            refreshModels();  // Load models on startup
+            updateDashboardInfo(); // Load dashboard info
+            
+            // Check status every 5 seconds
+            setInterval(checkStatus, 5000);
+        };
+        
+        // No authentication needed for admin
+        async function checkAuthentication() {
+            // Admin interface is always open - no authentication
+            return true;
+        }
+        
+        // Check proxy and admin status
+        async function checkStatus() {
+            // Check proxy status
+            try {
+                const response = await fetch(`http://localhost:${state.proxyPort}/health`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('proxyStatusValue').textContent = 'Online';
+                    document.getElementById('statusText').textContent = 'Proxy Online';
+                    document.getElementById('statusIndicator').classList.remove('status-offline');
+                    
+                    if (data.activeTarget) {
+                        document.getElementById('activeTargetName').textContent = data.activeTarget;
+                    }
+                }
+            } catch (error) {
+                document.getElementById('proxyStatusValue').textContent = 'Offline';
+                document.getElementById('statusText').textContent = 'Proxy Offline';
+                document.getElementById('statusIndicator').classList.add('status-offline');
+            }
+            
+            // Check admin status
+            try {
+                const response = await fetch(`http://localhost:${state.adminPort}/api/health`);
+                if (response.ok) {
+                    document.getElementById('adminStatusValue').textContent = 'Online';
+                }
+            } catch (error) {
+                document.getElementById('adminStatusValue').textContent = 'Offline';
+            }
+            
+            // Update security status
+            updateSecurityStatus();
+        }
+        
+        function updateSecurityStatus() {
+            const securityStatus = document.getElementById('securityStatus');
+            const securityInfo = document.getElementById('securityInfo');
+            const chatKeyStatus = document.getElementById('chatKeyStatus');
+            const apiAuthStatus = document.getElementById('apiAuthStatus');
+            
+            if (state.chatApiKey) {
+                securityStatus.textContent = 'Protected';
+                securityStatus.style.color = 'var(--success)';
+                securityInfo.textContent = 'Chat API secured';
+                securityInfo.style.color = 'var(--success)';
+                if (chatKeyStatus) {
+                    chatKeyStatus.innerHTML = 
+                        '<div style="padding: 12px; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 8px; color: var(--primary-light);">Chat API key is set</div>';
+                }
+                if (apiAuthStatus) {
+                    apiAuthStatus.textContent = 'Bearer token required';
+                }
+            } else {
+                securityStatus.textContent = 'Open';
+                securityStatus.style.color = 'var(--warning)';
+                securityInfo.textContent = 'No API key required';
+                securityInfo.style.color = 'var(--warning)';
+                if (chatKeyStatus) {
+                    chatKeyStatus.innerHTML = 'No API key required (open access)';
+                }
+                if (apiAuthStatus) {
+                    apiAuthStatus.textContent = 'No authentication required';
+                }
+            }
+            
+            // Update API documentation port numbers
+            const apiDocPort = document.getElementById('apiDocPort');
+            const adminApiPort = document.getElementById('adminApiPort');
+            const swaggerPort = document.getElementById('swaggerPort');
+            if (apiDocPort) apiDocPort.textContent = state.proxyPort;
+            if (adminApiPort) adminApiPort.textContent = state.adminPort;
+            if (swaggerPort) swaggerPort.textContent = state.proxyPort;
+        }
+        
+        // Page Navigation
+        function showPage(pageName) {
+            // Update active nav item
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update page title
+            const titles = {
+                'dashboard': 'Dashboard',
+                'playground': 'Playground',
+                'targets': 'LLM Targets',
+                'security': 'API Key Management',
+                'settings': 'Settings',
+                'api-docs': 'API Documentation',
+                'logs': 'Request Logs'
+            };
+            document.getElementById('pageTitle').textContent = titles[pageName] || 'Dashboard';
+            
+            // Show the page
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(pageName).classList.add('active');
+            
+            state.currentPage = pageName;
+            
+            // Update dashboard info when navigating to dashboard
+            if (pageName === 'dashboard') {
+                updateDashboardInfo();
+            }
+            
+            // Close mobile menu if open
+            closeSidebar();
+        }
+        
+        // Sidebar toggle for mobile
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('open');
+        }
+        
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.remove('open');
+        }
+        
+        // Tab navigation
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+        }
+        
+        function showDocTab(tabName) {
+            showTab(tabName);
+        }
+        
+        // API Documentation functions
+        function toggleEndpoint(endpointId) {
+            const endpoint = document.getElementById(`endpoint-${endpointId}`);
+            endpoint.classList.toggle('expanded');
+        }
+        
+        async function tryApiEndpoint(endpoint) {
+            const responseDiv = document.getElementById(`${endpoint}Response`);
+            const responseBody = document.getElementById(`${endpoint}ResponseBody`);
+            
+            responseDiv.style.display = 'block';
+            responseBody.textContent = 'Loading...';
+            
+            try {
+                let response;
+                const proxyPort = state.proxyPort || 3500;
+                const adminPort = state.adminPort || 3501;
+                
+                switch(endpoint) {
+                    case 'chat':
+                        const requestBody = document.getElementById('chatRequestBody').value;
+                        response = await fetch(`http://localhost:${proxyPort}/v1/chat/completions`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: requestBody
+                        });
+                        break;
+                        
+                    case 'models':
+                        response = await fetch(`http://localhost:${proxyPort}/v1/models`);
+                        break;
+                        
+                    case 'health':
+                        response = await fetch(`http://localhost:${proxyPort}/health`);
+                        break;
+                        
+                    case 'targets':
+                        response = await fetch(`http://localhost:${adminPort}/api/admin/targets`);
+                        break;
+                        
+                    case 'admin-models':
+                        response = await fetch(`http://localhost:${adminPort}/api/admin/models`);
+                        break;
+                }
+                
+                const data = await response.json();
+                responseBody.textContent = JSON.stringify(data, null, 2);
+                
+                // Add status code indicator
+                const statusColor = response.ok ? 'var(--success)' : 'var(--danger)';
+                responseBody.parentElement.querySelector('div').innerHTML = `
+                    <span style="color: ${statusColor};">Status: ${response.status}</span> 
+                    <span style="color: var(--gray-400); margin-left: 12px;">Response</span>
+                `;
+            } catch (error) {
+                responseBody.textContent = `Error: ${error.message}`;
+                responseBody.parentElement.querySelector('div').innerHTML = `
+                    <span style="color: var(--danger);">Error</span>
+                `;
+            }
+        }
+        
+        // Load targets
+        async function loadTargets() {
+            try {
+                // No authentication required for admin API
+                const response = await fetch(`http://localhost:${state.adminPort}/api/admin/targets`);
+                
+                if (response.ok) {
+                    state.targets = await response.json();
+                    displayTargets();
+                }
+            } catch (error) {
+                console.error('Failed to load targets:', error);
+            }
+        }
+        
+        function displayTargets() {
+            const container = document.getElementById('targetsList');
+            
+            if (state.targets.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; color: var(--gray-500); padding: 40px;">
+                        No targets configured. Click "Add Target" to get started.
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = state.targets.map(target => `
+                <div class="target-item ${target.enabled ? 'active' : ''}">
+                    <div class="target-header">
+                        <div class="target-name">
+                            ${target.enabled ? '🟢' : '⚫'} ${target.name}
+                        </div>
+                        <div class="target-status ${target.enabled ? 'active' : 'inactive'}">
+                            ${target.enabled ? 'Active' : 'Inactive'}
+                        </div>
+                    </div>
+                    <div class="target-details">
+                        <strong>URL:</strong> ${target.url}<br>
+                        <strong>Model:</strong> ${target.model}
+                    </div>
+                    <div class="target-actions">
+                        <button class="btn btn-primary btn-sm" onclick="testTarget('${target.id}')">Test</button>
+                        <button class="btn btn-success btn-sm" onclick="activateTarget('${target.id}')">Activate</button>
+                        <button class="btn btn-secondary btn-sm" onclick="editTarget('${target.id}')">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteTarget('${target.id}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Modal functions
+        function showAddTargetModal() {
+            document.getElementById('modalTitle').textContent = 'Add LLM Target';
+            document.getElementById('targetName').value = '';
+            document.getElementById('targetUrl').value = '';
+            document.getElementById('targetApiKey').value = '';
+            document.getElementById('targetEnabled').checked = true;
+            
+            // Reset model dropdown
+            const modelSelect = document.getElementById('targetModel');
+            modelSelect.innerHTML = '';
+            document.getElementById('modelFetchHint').textContent = 'Click "Fetch Models" to see models available at this endpoint';
+            
+            state.selectedTarget = null;
+            document.getElementById('targetModal').classList.add('active');
+        }
+        
+        function editTarget(targetId) {
+            const target = state.targets.find(t => t.id === targetId);
+            if (!target) return;
+            
+            document.getElementById('modalTitle').textContent = 'Edit LLM Target';
+            document.getElementById('targetName').value = target.name;
+            document.getElementById('targetUrl').value = target.url;
+            document.getElementById('targetApiKey').value = '';
+            document.getElementById('targetEnabled').checked = target.enabled;
+            
+            // Set up the model dropdown with the current model
+            const modelSelect = document.getElementById('targetModel');
+            modelSelect.innerHTML = '';
+            const option = document.createElement('option');
+            option.value = target.model;
+            option.textContent = target.model;
+            option.selected = true;
+            modelSelect.appendChild(option);
+            
+            document.getElementById('modelFetchHint').textContent = 'Click "Fetch Models" to refresh the list of available models';
+            
+            state.selectedTarget = targetId;
+            document.getElementById('targetModal').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('targetModal').classList.remove('active');
+        }
+        
+        function applyPreset(presetName) {
+            const preset = presets[presetName];
+            document.getElementById('targetName').value = preset.name;
+            document.getElementById('targetUrl').value = preset.url;
+            document.getElementById('targetApiKey').value = preset.apiKey;
+            
+            // Always leave the model dropdown empty when applying presets
+            const modelSelect = document.getElementById('targetModel');
+            modelSelect.innerHTML = '';
+            document.getElementById('modelFetchHint').textContent = 'Click "Fetch Models" to see models available at this endpoint';
+        }
+        
+        async function fetchTargetModels() {
+            const url = document.getElementById('targetUrl').value;
+            const apiKey = document.getElementById('targetApiKey').value;
+            const modelSelect = document.getElementById('targetModel');
+            const fetchBtn = document.getElementById('fetchModelsBtn');
+            const hint = document.getElementById('modelFetchHint');
+            
+            if (!url) {
+                showNotification('Please enter the endpoint URL first', 'error');
+                return;
+            }
+            
+            // Extract base URL from chat completions URL
+            const baseUrl = url.replace('/chat/completions', '');
+            const modelsUrl = `${baseUrl}/models`;
+            
+            fetchBtn.disabled = true;
+            fetchBtn.textContent = '⏳ Fetching...';
+            modelSelect.innerHTML = '<option value="">Loading models...</option>';
+            
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                if (apiKey) {
+                    headers['Authorization'] = `Bearer ${apiKey}`;
+                }
+                
+                const response = await fetch(modelsUrl, {
+                    headers,
+                    mode: 'cors'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    modelSelect.innerHTML = '';
+                    
+                    if (data.data && data.data.length > 0) {
+                        // OpenAI format
+                        data.data.forEach(model => {
+                            const option = document.createElement('option');
+                            option.value = model.id;
+                            option.textContent = model.id;
+                            modelSelect.appendChild(option);
+                        });
+                        hint.innerHTML = `<span style="color: var(--success);">✓ Found ${data.data.length} model(s)</span>`;
+                    } else if (data.models && data.models.length > 0) {
+                        // Ollama format
+                        data.models.forEach(model => {
+                            const option = document.createElement('option');
+                            option.value = model.name || model.model;
+                            option.textContent = model.name || model.model;
+                            modelSelect.appendChild(option);
+                        });
+                        hint.innerHTML = `<span style="color: var(--success);">✓ Found ${data.models.length} model(s)</span>`;
+                    } else {
+                        modelSelect.innerHTML = '<option value="">No models found - enter manually</option>';
+                        hint.innerHTML = '<span style="color: var(--warning);">No models found at this endpoint</span>';
+                    }
+                } else {
+                    throw new Error(`Failed to fetch models: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('Error fetching models:', error);
+                modelSelect.innerHTML = '<option value="">Failed to fetch - enter manually</option>';
+                hint.innerHTML = `<span style="color: var(--error);">Failed to fetch models: ${error.message}</span>`;
+                
+                // Allow manual input as fallback
+                const manualOption = document.createElement('option');
+                manualOption.value = 'manual';
+                manualOption.textContent = 'Enter model name manually';
+                modelSelect.appendChild(manualOption);
+            } finally {
+                fetchBtn.disabled = false;
+                fetchBtn.textContent = '🔍 Fetch Models';
+            }
+        }
+        
+        async function saveTarget() {
+            const target = {
+                name: document.getElementById('targetName').value,
+                url: document.getElementById('targetUrl').value,
+                model: document.getElementById('targetModel').value,
+                apiKey: document.getElementById('targetApiKey').value || undefined,
+                enabled: document.getElementById('targetEnabled').checked,
+                priority: 1
+            };
+            
+            if (!target.name || !target.url || !target.model) {
+                showNotification('Please fill in all required fields (select a model after fetching)', 'error');
+                return;
+            }
+            
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                const method = state.selectedTarget ? 'PUT' : 'POST';
+                const url = state.selectedTarget 
+                    ? `http://localhost:${state.adminPort}/api/admin/targets/${state.selectedTarget}`
+                    : `http://localhost:${state.adminPort}/api/admin/targets`;
+                
+                const response = await fetch(url, {
+                    method,
+                    headers,
+                    body: JSON.stringify(target)
+                });
+                
+                if (response.ok) {
+                    showNotification('Target saved successfully', 'success');
+                    closeModal();
+                    loadTargets();
+                    
+                    if (target.enabled) {
+                        const newTarget = await response.json();
+                        await activateTarget(newTarget.id);
+                    }
+                } else {
+                    const error = await response.json();
+                    showNotification('Failed to save: ' + error.error, 'error');
+                }
+            } catch (error) {
+                showNotification('Failed to save: ' + error.message, 'error');
+            }
+        }
+        
+        async function activateTarget(targetId) {
+            try {
+                const headers = {};
+                
+                const response = await fetch(`http://localhost:${state.adminPort}/api/admin/targets/${targetId}/set-default`, {
+                    method: 'POST',
+                    headers
+                });
+                
+                if (response.ok) {
+                    showNotification('Target activated', 'success');
+                    loadTargets();
+                    checkStatus();
+                }
+            } catch (error) {
+                showNotification('Failed to activate: ' + error.message, 'error');
+            }
+        }
+        
+        async function testTarget(targetId) {
+            const button = event.target;
+            const originalText = button.textContent;
+            button.innerHTML = '<span class="loader"></span>';
+            button.disabled = true;
+            
+            try {
+                const headers = {};
+                
+                const response = await fetch(`http://localhost:${state.adminPort}/api/admin/targets/${targetId}/test`, {
+                    method: 'POST',
+                    headers
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Connection successful!', 'success');
+                } else {
+                    showNotification('Connection failed: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showNotification('Test failed: ' + error.message, 'error');
+            } finally {
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        }
+        
+        async function deleteTarget(targetId) {
+            if (!confirm('Are you sure you want to delete this target?')) {
+                return;
+            }
+            
+            try {
+                const headers = {};
+                
+                const response = await fetch(`http://localhost:${state.adminPort}/api/admin/targets/${targetId}`, {
+                    method: 'DELETE',
+                    headers
+                });
+                
+                if (response.ok) {
+                    showNotification('Target deleted', 'success');
+                    loadTargets();
+                }
+            } catch (error) {
+                showNotification('Failed to delete: ' + error.message, 'error');
+            }
+        }
+        
+        // API Key Management
+        async function setAdminKey() {
+            const newKey = document.getElementById('newAdminKey').value;
+            if (!newKey) {
+                showNotification('Please enter an admin API key', 'error');
+                return;
+            }
+            
+            try {
+                // Update proxy configuration with new admin key
+                const response = await fetch(`http://localhost:${state.adminPort}/api/admin/config/proxy`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Api-Key': state.adminApiKey || ''
+                    },
+                    body: JSON.stringify({
+                        adminApiKey: newKey
+                    })
+                });
+                
+                if (response.ok) {
+                    state.adminApiKey = newKey;
+                    localStorage.setItem('adminApiKey', newKey);
+                    showNotification('Admin API key set successfully', 'success');
+                    updateSecurityStatus();
+                } else {
+                    showNotification('Failed to set admin key', 'error');
+                }
+            } catch (error) {
+                showNotification('Error setting admin key: ' + error.message, 'error');
+            }
+        }
+        
+        async function setProxyKey() {
+            const newKey = document.getElementById('newProxyKey').value;
+            
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                if (state.adminApiKey) {
+                    headers['X-Admin-Api-Key'] = state.adminApiKey;
+                }
+                
+                // Update proxy configuration with new proxy key
+                const response = await fetch(`http://localhost:${state.adminPort}/api/admin/config/proxy`, {
+                    method: 'PUT',
+                    headers,
+                    body: JSON.stringify({
+                        proxyApiKey: newKey || undefined
+                    })
+                });
+                
+                if (response.ok) {
+                    state.proxyApiKey = newKey;
+                    showNotification(newKey ? 'Proxy API key set successfully' : 'Proxy API key removed', 'success');
+                    updateSecurityStatus();
+                } else {
+                    showNotification('Failed to set proxy key', 'error');
+                }
+            } catch (error) {
+                showNotification('Error setting proxy key: ' + error.message, 'error');
+            }
+        }
+        
+        // Testing functions
+        async function sendSimpleTest() {
+            const message = document.getElementById('simpleMessage').value;
+            const resultsDiv = document.getElementById('testResults');
+            const selectedModel = state.selectedModel || document.getElementById('testModelSelect').value;
+            
+            if (!selectedModel) {
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-error">
+                        <span class="alert-icon">❌</span>
+                        <div>Please select a model from the dropdown above before testing.</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            resultsDiv.innerHTML = '<div class="loader"></div> Sending...';
+            
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                if (state.proxyApiKey) {
+                    headers['Authorization'] = `Bearer ${state.proxyApiKey}`;
+                }
+                
+                const response = await fetch(`http://localhost:${state.proxyPort}/v1/chat/completions`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        model: selectedModel,
+                        messages: [
+                            { role: 'user', content: message }
+                        ],
+                        stream: false
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultsDiv.innerHTML = `
+                        <div class="chat-message message-user">
+                            <div class="message-role">User</div>
+                            <div class="message-content">${message}</div>
+                        </div>
+                        <div class="chat-message message-assistant">
+                            <div class="message-role">Assistant</div>
+                            <div class="message-content">${data.choices[0].message.content}</div>
+                        </div>
+                    `;
+                } else {
+                    const error = await response.json();
+                    resultsDiv.innerHTML = `
+                        <div class="chat-message message-system">
+                            <div class="message-role">Error</div>
+                            <div class="message-content">${error.error?.message || 'Unknown error'}</div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="chat-message message-system">
+                        <div class="message-role">Connection Error</div>
+                        <div class="message-content">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+        
+        async function sendToolTest() {
+            const message = document.getElementById('toolMessage').value;
+            const includeTools = document.getElementById('includeTools').checked;
+            const resultsDiv = document.getElementById('testResults');
+            const selectedModel = state.selectedModel || document.getElementById('testModelSelect').value;
+            
+            if (!selectedModel) {
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-error">
+                        <span class="alert-icon">❌</span>
+                        <div>Please select a model from the dropdown above before testing.</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            resultsDiv.innerHTML = '<div class="loader"></div> Sending with tools...';
+            
+            const tools = includeTools ? [
+                {
+                    type: "function",
+                    function: {
+                        name: "get_current_weather",
+                        description: "Get the current weather in a given location",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                location: {
+                                    type: "string",
+                                    description: "The city and state, e.g. San Francisco, CA"
+                                }
+                            },
+                            required: ["location"]
+                        }
+                    }
+                },
+                {
+                    type: "function",
+                    function: {
+                        name: "calculate",
+                        description: "Perform mathematical calculations",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                expression: {
+                                    type: "string",
+                                    description: "The mathematical expression to evaluate"
+                                }
+                            },
+                            required: ["expression"]
+                        }
+                    }
+                }
+            ] : [];
+            
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                if (state.proxyApiKey) {
+                    headers['Authorization'] = `Bearer ${state.proxyApiKey}`;
+                }
+                
+                const response = await fetch(`http://localhost:${state.proxyPort}/v1/chat/completions`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        model: selectedModel,
+                        messages: [
+                            { role: 'user', content: message }
+                        ],
+                        tools,
+                        stream: false
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultsDiv.innerHTML = `
+                        <div class="chat-message message-user">
+                            <div class="message-role">User</div>
+                            <div class="message-content">${message}</div>
+                        </div>
+                        <div class="chat-message message-assistant">
+                            <div class="message-role">Assistant (with tools)</div>
+                            <div class="message-content">${data.choices[0].message.content}</div>
+                        </div>
+                    `;
+                } else {
+                    const error = await response.json();
+                    resultsDiv.innerHTML = `
+                        <div class="chat-message message-system">
+                            <div class="message-role">Error</div>
+                            <div class="message-content">${error.error?.message || 'Unknown error'}</div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="chat-message message-system">
+                        <div class="message-role">Connection Error</div>
+                        <div class="message-content">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+        
+        async function sendStreamTest() {
+            const message = document.getElementById('streamMessage').value;
+            const resultsDiv = document.getElementById('testResults');
+            const selectedModel = state.selectedModel || document.getElementById('testModelSelect').value;
+            
+            if (!selectedModel) {
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-error">
+                        <span class="alert-icon">❌</span>
+                        <div>Please select a model from the dropdown above before testing.</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            resultsDiv.innerHTML = `
+                <div class="chat-message message-user">
+                    <div class="message-role">User</div>
+                    <div class="message-content">${message}</div>
+                </div>
+                <div class="chat-message message-assistant">
+                    <div class="message-role">Assistant (streaming)</div>
+                    <div class="message-content" id="streamContent"></div>
+                </div>
+            `;
+            
+            const streamContent = document.getElementById('streamContent');
+            
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                if (state.proxyApiKey) {
+                    headers['Authorization'] = `Bearer ${state.proxyApiKey}`;
+                }
+                
+                const response = await fetch(`http://localhost:${state.proxyPort}/v1/chat/completions`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        model: selectedModel,
+                        messages: [
+                            { role: 'user', content: message }
+                        ],
+                        stream: true
+                    })
+                });
+                
+                if (response.ok) {
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let content = '';
+                    
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+                        
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = line.slice(6);
+                                if (data === '[DONE]') continue;
+                                
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    if (parsed.choices && parsed.choices[0].delta?.content) {
+                                        content += parsed.choices[0].delta.content;
+                                        streamContent.textContent = content;
+                                    }
+                                } catch (e) {
+                                    // Ignore parse errors
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    streamContent.innerHTML = '<span style="color: var(--danger);">Stream error</span>';
+                }
+            } catch (error) {
+                streamContent.innerHTML = `<span style="color: var(--danger);">Connection error: ${error.message}</span>`;
+            }
+        }
+        
+        // Settings functions
+        async function saveSettings() {
+            const settings = {
+                port: parseInt(document.getElementById('settingsProxyPort').value),
+                adminPort: parseInt(document.getElementById('settingsAdminPort').value),
+                corsOrigins: document.getElementById('corsOrigins').value.split(',').map(s => s.trim()),
+                maxRequestSize: document.getElementById('maxRequestSize').value,
+                enableLogging: document.getElementById('enableLogging').checked
+            };
+            
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                if (state.adminApiKey) {
+                    headers['X-Admin-Api-Key'] = state.adminApiKey;
+                }
+                
+                const response = await fetch(`http://localhost:${state.adminPort}/api/admin/config/proxy`, {
+                    method: 'PUT',
+                    headers,
+                    body: JSON.stringify(settings)
+                });
+                
+                if (response.ok) {
+                    showNotification('Settings saved successfully', 'success');
+                    state.proxyPort = settings.port;
+                    state.adminPort = settings.adminPort;
+                } else {
+                    showNotification('Failed to save settings', 'error');
+                }
+            } catch (error) {
+                showNotification('Error saving settings: ' + error.message, 'error');
+            }
+        }
+        
+        // Utility functions
+        function copyCode(button) {
+            const codeBlock = button.parentElement.querySelector('pre');
+            const text = codeBlock.textContent;
+            navigator.clipboard.writeText(text);
+            button.textContent = 'Copied!';
+            setTimeout(() => {
+                button.textContent = 'Copy';
+            }, 2000);
+        }
+        
+        function copySwaggerUrl() {
+            const port = document.getElementById('swaggerPort').textContent;
+            const url = `http://localhost:${port}/swagger.json`;
+            navigator.clipboard.writeText(url);
+            
+            // Show notification
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '✅ Copied!';
+            setTimeout(() => {
+                button.innerHTML = originalText;
+            }, 2000);
+        }
+        
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type}`;
+            notification.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 1001; min-width: 300px; animation: slideIn 0.3s ease;';
+            notification.innerHTML = `
+                <span class="alert-icon">${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}</span>
+                <div>${message}</div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'fadeOut 0.3s ease';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+        
+        // Logs functions
+        async function refreshLogs() {
+            // This would fetch actual logs from the server
+            const logsContainer = document.getElementById('logsContainer');
+            logsContainer.innerHTML = `
+                <div style="color: var(--gray-400);">
+                    [2024-01-15 10:30:00] Proxy started on port ${state.proxyPort}<br>
+                    [2024-01-15 10:30:01] Admin API started on port ${state.adminPort}<br>
+                    [2024-01-15 10:30:05] Target configured: Ollama Local<br>
+                    [2024-01-15 10:31:00] Request received: POST /v1/chat/completions<br>
+                    [2024-01-15 10:31:02] Response sent: 200 OK
+                </div>
+            `;
+        }
+        
+        function clearLogs() {
+            const logsContainer = document.getElementById('logsContainer');
+            logsContainer.innerHTML = '<div style="color: var(--gray-500);">Logs cleared</div>';
+        }
+    </script>
+</body>
+</html>

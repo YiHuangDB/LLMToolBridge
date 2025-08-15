@@ -1,0 +1,39 @@
+{
+  "model": "gpt-3.5-turbo",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant."
+    },
+    {
+      "role": "user",
+      "content": "What is the current time?"
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "mcp__mcp-unified-framework__datetime-tool_current_time",
+        "description": "Get current date and time in various formats",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "format": {
+              "type": "string",
+              "description": "Time format: 'iso', 'readable', 'timestamp', or custom strftime format",
+              "default": "iso"
+            },
+            "timezone": {
+              "type": "string",
+              "description": "Timezone name (e.g., 'UTC', 'local')",
+              "default": "local"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ],
+  "temperature": 0.1
+}
