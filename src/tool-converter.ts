@@ -34,10 +34,11 @@ follow this format:
 }
 
 IMPORTANT: 
-- Output ONLY the raw JSON object, nothing else
+- Output ONLY the raw JSON object, only contains function_call, name, arguments, and parameters required, no additional properties.
 - Do NOT wrap the JSON in code blocks (no \`\`\`)
 - Do NOT include any explanatory text before or after the JSON
 - Ensure the JSON is valid and properly formatted
+- Ensure only JSON is returned, no additional text before or after json.
 - After receiving the function result, you can continue the conversation normally
 check with user prompt with functions above, if above function can be used solve user question, response with pure json follow function example.
 If you don't need to use a function, just respond normally without JSON.`;

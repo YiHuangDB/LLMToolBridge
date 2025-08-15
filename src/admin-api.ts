@@ -1,6 +1,8 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { ConfigurationManager } from './config-manager';
 import { LLMTarget } from './config-types';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export class AdminAPI {
   private router: Router;
@@ -197,6 +199,176 @@ export class AdminAPI {
           message: 'Connection failed',
           error: error.message || String(error)
         });
+      }
+    });
+
+    // Logs endpoints
+    this.router.get('/admin/logs', async (req, res) => {
+      try {
+        const limit = parseInt(req.query.limit as string) || 100;
+        const offset = parseInt(req.query.offset as string) || 0;
+        const search = req.query.search as string || '';
+        const logsDir = path.join(process.cwd(), 'logs');
+        
+        if (!fs.existsSync(logsDir)) {
+          return res.json({ logs: [], total: 0, hasMore: false });
+        }
+
+        // Get all log files sorted by modification time (most recent first)
+        const logFiles = fs.readdirSync(logsDir)
+          .filter(file => file.endsWith('.log'))
+          .map(file => {
+            try {
+              const filePath = path.join(logsDir, file);
+              const stats = fs.statSync(filePath);
+              return {
+                file,
+                path: filePath,
+                mtime: stats.mtime.getTime()
+              };
+            } catch (err) {
+              // Skip files we can't access
+              console.warn(`Cannot access log file ${file}:`, err);
+              return null;
+            }
+          })
+          .filter(file => file !== null)
+          .sort((a, b) => b.mtime - a.mtime);
+
+        if (logFiles.length === 0) {
+          return res.json({ logs: [], total: 0, hasMore: false });
+        }
+
+        // Read and parse logs from the most recent file
+        const allLogs: any[] = [];
+        const currentLogFile = logFiles[0].path;
+        
+        try {
+          const content = fs.readFileSync(currentLogFile, 'utf-8');
+          const lines = content.split('\n');
+          
+          let currentEntry: any = null;
+          const timestampRegex = /^\[(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)\]/;
+          
+          for (const line of lines) {
+            const timestampMatch = line.match(timestampRegex);
+            if (timestampMatch) {
+              // Start of a new log entry
+              if (currentEntry) {
+                allLogs.push(currentEntry);
+              }
+              
+              currentEntry = {
+                timestamp: timestampMatch[1],
+                type: 'info',
+                message: line,
+                details: []
+              };
+              
+              // Determine log type
+              if (line.includes('CLIENT -> PROXY')) currentEntry.type = 'request';
+              else if (line.includes('PROXY -> LLM')) currentEntry.type = 'proxy';
+              else if (line.includes('LLM BACKEND -> PROXY')) currentEntry.type = 'response';
+              else if (line.includes('PROXY -> CLIENT')) currentEntry.type = 'client';
+              else if (line.includes('ERROR')) currentEntry.type = 'error';
+              else if (line.includes('TOOL EXECUTION')) currentEntry.type = 'tool';
+            } else if (currentEntry && line.trim()) {
+              // Add to current entry details
+              currentEntry.details.push(line);
+            }
+          }
+          
+          // Add the last entry
+          if (currentEntry) {
+            allLogs.push(currentEntry);
+          }
+        } catch (error) {
+          console.error('Error reading log file:', error);
+        }
+
+        // Filter by search term if provided
+        let filteredLogs = allLogs;
+        if (search) {
+          const searchLower = search.toLowerCase();
+          filteredLogs = allLogs.filter(log => 
+            log.message.toLowerCase().includes(searchLower) ||
+            log.details.some((d: string) => d.toLowerCase().includes(searchLower))
+          );
+        }
+
+        // Sort by timestamp (most recent first)
+        filteredLogs.sort((a, b) => 
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
+
+        // Apply pagination
+        const total = filteredLogs.length;
+        const paginatedLogs = filteredLogs.slice(offset, offset + limit);
+        const hasMore = offset + limit < total;
+
+        res.json({
+          logs: paginatedLogs,
+          total,
+          hasMore,
+          currentFile: logFiles[0].file,
+          totalFiles: logFiles.length
+        });
+      } catch (error) {
+        console.error('Error fetching logs:', error);
+        res.status(500).json({ 
+          error: 'Failed to fetch logs',
+          logs: [],
+          total: 0,
+          hasMore: false
+        });
+      }
+    });
+
+    // Clear logs
+    this.router.delete('/admin/logs', (req, res) => {
+      try {
+        const logsDir = path.join(process.cwd(), 'logs');
+        
+        if (fs.existsSync(logsDir)) {
+          const files = fs.readdirSync(logsDir);
+          files.forEach(file => {
+            if (file.endsWith('.log')) {
+              fs.unlinkSync(path.join(logsDir, file));
+            }
+          });
+        }
+        
+        res.json({ message: 'Logs cleared successfully' });
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to clear logs' });
+      }
+    });
+
+    // Get log files list
+    this.router.get('/admin/logs/files', (req, res) => {
+      try {
+        const logsDir = path.join(process.cwd(), 'logs');
+        
+        if (!fs.existsSync(logsDir)) {
+          return res.json({ files: [] });
+        }
+
+        const files = fs.readdirSync(logsDir)
+          .filter(file => file.endsWith('.log'))
+          .map(file => {
+            const stats = fs.statSync(path.join(logsDir, file));
+            return {
+              name: file,
+              size: stats.size,
+              modified: stats.mtime,
+              created: stats.birthtime
+            };
+          })
+          .sort((a, b) => b.modified.getTime() - a.modified.getTime());
+
+        res.json({ files });
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch log files' });
       }
     });
   }

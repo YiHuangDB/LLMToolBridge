@@ -867,6 +867,87 @@
             }
         }
         
+        /* Logs Styles */
+        .log-entry {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--gray-700);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+        
+        .log-entry:hover {
+            border-color: var(--gray-600);
+            background: rgba(15, 23, 42, 0.7);
+        }
+        
+        .log-entry-header {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--gray-700);
+        }
+        
+        .log-entry.expanded .log-entry-header {
+            background: rgba(59, 130, 246, 0.05);
+        }
+        
+        .log-type-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .log-type-request { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .log-type-response { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+        .log-type-error { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        .log-type-tool { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+        .log-type-proxy { background: rgba(251, 146, 60, 0.2); color: #fb923c; }
+        .log-type-info { background: rgba(156, 163, 175, 0.2); color: #9ca3af; }
+        
+        .log-timestamp {
+            color: var(--gray-500);
+            font-size: 12px;
+            font-family: monospace;
+        }
+        
+        .log-message {
+            flex: 1;
+            color: var(--gray-300);
+            font-size: 13px;
+            font-family: monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .log-entry-details {
+            display: none;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border-top: 1px solid var(--gray-700);
+        }
+        
+        .log-entry.expanded .log-entry-details {
+            display: block;
+        }
+        
+        .log-details-content {
+            font-family: monospace;
+            font-size: 12px;
+            color: var(--gray-400);
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
         /* API Documentation Styles */
         .api-endpoint {
             background: rgba(15, 23, 42, 0.5);
@@ -1802,17 +1883,47 @@
                                 Request Logs
                             </h2>
                             <div class="card-actions">
+                                <span id="logsInfo" style="margin-right: 16px; color: var(--gray-400); font-size: 14px;"></span>
                                 <button class="btn btn-secondary btn-sm" onclick="refreshLogs()">
-                                    Refresh
+                                    <span id="refreshIcon">↻</span> Refresh
                                 </button>
                                 <button class="btn btn-ghost btn-sm" onclick="clearLogs()">
-                                    Clear
+                                    Clear All
                                 </button>
                             </div>
                         </div>
                         
-                        <div id="logsContainer" style="background: var(--gray-900); border-radius: 8px; padding: 16px; font-family: monospace; font-size: 13px; color: var(--gray-300); height: 500px; overflow-y: auto;">
-                            <div style="color: var(--gray-500);">Logs will appear here...</div>
+                        <!-- Search and Filter Bar -->
+                        <div style="padding: 16px; border-bottom: 1px solid var(--gray-700); display: flex; gap: 12px; align-items: center;">
+                            <input type="text" id="logSearch" class="form-input" placeholder="Search logs..." 
+                                   style="flex: 1; max-width: 400px;" 
+                                   onkeyup="if(event.key === 'Enter') searchLogs()">
+                            <select id="logTypeFilter" class="form-select" style="width: 150px;" onchange="filterLogs()">
+                                <option value="">All Types</option>
+                                <option value="request">Requests</option>
+                                <option value="response">Responses</option>
+                                <option value="error">Errors</option>
+                                <option value="tool">Tools</option>
+                                <option value="proxy">Proxy</option>
+                            </select>
+                            <button class="btn btn-primary btn-sm" onclick="searchLogs()">Search</button>
+                            <button class="btn btn-ghost btn-sm" onclick="clearSearch()">Clear</button>
+                        </div>
+                        
+                        <!-- Logs Container -->
+                        <div id="logsContainer" style="background: var(--gray-900); min-height: 400px; max-height: 600px; overflow-y: auto; position: relative;">
+                            <div id="logsContent" style="padding: 16px;">
+                                <div style="color: var(--gray-500); text-align: center; padding: 40px;">
+                                    Loading logs...
+                                </div>
+                            </div>
+                            
+                            <!-- Load More Button -->
+                            <div id="loadMoreContainer" style="display: none; padding: 16px; text-align: center; border-top: 1px solid var(--gray-700);">
+                                <button class="btn btn-secondary" onclick="loadMoreLogs()">
+                                    Load More
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2353,6 +2464,13 @@
             // Update dashboard info when navigating to dashboard
             if (pageName === 'dashboard') {
                 updateDashboardInfo();
+            }
+            
+            // Load logs when navigating to logs page
+            if (pageName === 'logs') {
+                if (logsState.logs.length === 0) {
+                    loadLogs();
+                }
             }
             
             // Close mobile menu if open
@@ -3166,24 +3284,206 @@
             }, 3000);
         }
         
+        // Logs state
+        let logsState = {
+            logs: [],
+            offset: 0,
+            limit: 50,
+            hasMore: false,
+            total: 0,
+            search: '',
+            typeFilter: '',
+            loading: false
+        };
+        
         // Logs functions
-        async function refreshLogs() {
-            // This would fetch actual logs from the server
-            const logsContainer = document.getElementById('logsContainer');
-            logsContainer.innerHTML = `
-                <div style="color: var(--gray-400);">
-                    [2024-01-15 10:30:00] Proxy started on port ${state.proxyPort}<br>
-                    [2024-01-15 10:30:01] Admin API started on port ${state.adminPort}<br>
-                    [2024-01-15 10:30:05] Target configured: Ollama Local<br>
-                    [2024-01-15 10:31:00] Request received: POST /v1/chat/completions<br>
-                    [2024-01-15 10:31:02] Response sent: 200 OK
-                </div>
-            `;
+        async function loadLogs(append = false) {
+            if (logsState.loading) return;
+            logsState.loading = true;
+            
+            // Show loading state
+            if (!append) {
+                document.getElementById('logsContent').innerHTML = `
+                    <div style="color: var(--gray-500); text-align: center; padding: 40px;">
+                        <div class="loader" style="margin: 0 auto 16px;"></div>
+                        Loading logs...
+                    </div>
+                `;
+            }
+            
+            try {
+                const params = new URLSearchParams({
+                    limit: logsState.limit.toString(),
+                    offset: logsState.offset.toString()
+                });
+                
+                if (logsState.search) {
+                    params.append('search', logsState.search);
+                }
+                
+                const response = await fetch(`http://localhost:${state.adminPort}/api/admin/logs?${params}`);
+                const data = await response.json();
+                
+                if (append) {
+                    logsState.logs = [...logsState.logs, ...data.logs];
+                } else {
+                    logsState.logs = data.logs;
+                }
+                
+                logsState.hasMore = data.hasMore;
+                logsState.total = data.total;
+                
+                // Update UI
+                updateLogsInfo(data);
+                renderLogs();
+                
+                // Show/hide load more button
+                const loadMoreContainer = document.getElementById('loadMoreContainer');
+                loadMoreContainer.style.display = logsState.hasMore ? 'block' : 'none';
+                
+            } catch (error) {
+                console.error('Failed to load logs:', error);
+                document.getElementById('logsContent').innerHTML = `
+                    <div style="color: var(--error); text-align: center; padding: 40px;">
+                        Failed to load logs: ${error.message}
+                    </div>
+                `;
+            } finally {
+                logsState.loading = false;
+            }
         }
         
-        function clearLogs() {
-            const logsContainer = document.getElementById('logsContainer');
-            logsContainer.innerHTML = '<div style="color: var(--gray-500);">Logs cleared</div>';
+        function renderLogs() {
+            const logsContent = document.getElementById('logsContent');
+            
+            if (logsState.logs.length === 0) {
+                logsContent.innerHTML = `
+                    <div style="color: var(--gray-500); text-align: center; padding: 40px;">
+                        ${logsState.search ? 'No logs found matching your search' : 'No logs available'}
+                    </div>
+                `;
+                return;
+            }
+            
+            // Filter by type if needed
+            let filteredLogs = logsState.logs;
+            if (logsState.typeFilter) {
+                filteredLogs = logsState.logs.filter(log => log.type === logsState.typeFilter);
+            }
+            
+            // Render logs
+            logsContent.innerHTML = filteredLogs.map((log, index) => {
+                const timestamp = new Date(log.timestamp).toLocaleString();
+                const messagePreview = log.message.substring(0, 100) + (log.message.length > 100 ? '...' : '');
+                const hasDetails = log.details && log.details.length > 0;
+                
+                return `
+                    <div class="log-entry" id="log-${index}">
+                        <div class="log-entry-header" onclick="toggleLogDetails(${index})">
+                            <span class="log-type-badge log-type-${log.type}">${log.type}</span>
+                            <span class="log-timestamp">${timestamp}</span>
+                            <span class="log-message">${escapeHtml(messagePreview)}</span>
+                            ${hasDetails ? '<span style="color: var(--gray-500);">▼</span>' : ''}
+                        </div>
+                        ${hasDetails ? `
+                            <div class="log-entry-details">
+                                <div class="log-details-content">${escapeHtml(log.details.join('\n'))}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function toggleLogDetails(index) {
+            const logEntry = document.getElementById(`log-${index}`);
+            if (logEntry) {
+                logEntry.classList.toggle('expanded');
+            }
+        }
+        
+        function updateLogsInfo(data) {
+            const logsInfo = document.getElementById('logsInfo');
+            if (data.currentFile) {
+                logsInfo.textContent = `${data.total} entries | ${data.currentFile}`;
+            } else {
+                logsInfo.textContent = `${data.total} entries`;
+            }
+        }
+        
+        async function refreshLogs() {
+            // Rotate refresh icon
+            const refreshIcon = document.getElementById('refreshIcon');
+            refreshIcon.style.transform = 'rotate(360deg)';
+            refreshIcon.style.transition = 'transform 0.5s';
+            
+            // Reset state and reload
+            logsState.offset = 0;
+            logsState.logs = [];
+            await loadLogs();
+            
+            // Reset icon
+            setTimeout(() => {
+                refreshIcon.style.transform = '';
+            }, 500);
+        }
+        
+        async function loadMoreLogs() {
+            logsState.offset += logsState.limit;
+            await loadLogs(true);
+        }
+        
+        async function searchLogs() {
+            const searchInput = document.getElementById('logSearch');
+            logsState.search = searchInput.value;
+            logsState.offset = 0;
+            logsState.logs = [];
+            await loadLogs();
+        }
+        
+        function filterLogs() {
+            const filterSelect = document.getElementById('logTypeFilter');
+            logsState.typeFilter = filterSelect.value;
+            renderLogs();
+        }
+        
+        function clearSearch() {
+            document.getElementById('logSearch').value = '';
+            document.getElementById('logTypeFilter').value = '';
+            logsState.search = '';
+            logsState.typeFilter = '';
+            logsState.offset = 0;
+            logsState.logs = [];
+            loadLogs();
+        }
+        
+        async function clearLogs() {
+            if (!confirm('Are you sure you want to clear all logs? This cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:${state.adminPort}/api/admin/logs`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showNotification('Logs cleared successfully', 'success');
+                    logsState.logs = [];
+                    logsState.offset = 0;
+                    renderLogs();
+                } else {
+                    showNotification('Failed to clear logs', 'error');
+                }
+            } catch (error) {
+                showNotification(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
     </script>
 </body>

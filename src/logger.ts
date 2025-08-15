@@ -4,7 +4,6 @@ import path from 'path';
 export class RequestLogger {
   private logDir: string;
   private currentLogFile: string;
-  private logStream: fs.WriteStream | null = null;
 
   constructor(logDir: string = 'logs') {
     this.logDir = path.resolve(logDir);
@@ -13,9 +12,6 @@ export class RequestLogger {
     // Create a new log file with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
     this.currentLogFile = path.join(this.logDir, `llm-proxy-${timestamp}.log`);
-    
-    // Open write stream
-    this.logStream = fs.createWriteStream(this.currentLogFile, { flags: 'a' });
     
     this.writeLog('='.repeat(80));
     this.writeLog(`LLM Tool Bridge Proxy - Session Started: ${new Date().toISOString()}`);
@@ -29,8 +25,11 @@ export class RequestLogger {
   }
 
   private writeLog(message: string): void {
-    if (this.logStream) {
-      this.logStream.write(message + '\n');
+    // Write to file using sync to avoid locking issues
+    try {
+      fs.appendFileSync(this.currentLogFile, message + '\n');
+    } catch (error) {
+      console.error('Failed to write to log file:', error);
     }
     // Also log to console for debugging
     console.log(message);
